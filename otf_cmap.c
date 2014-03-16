@@ -171,11 +171,11 @@ int cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodi
 			for (j = 0; j < segCount; j++) {
 				if (glyph >= fmt4->startCount[j] && glyph <= fmt4->endCount[j]) {
 					if (!fmt4->idRangeOffset[j]) {
-						return fmt4->idDelta[j] + glyph;
+						return fmt4->idDelta[j] + glyph - 1;
 					} else {
-						/* TODO */
-						fprintf(stderr, "CMAP: (%s) idRangeOffset not implemented\n", __func__);
-						exit(-1);
+						int u_off = glyph - fmt4->startCount[j];
+						int idx = (fmt4->idRangeOffset[j]/2)-(segCount-j);
+						return fmt4->glyphIdArray[idx+u_off]-1;
 					}
 				}
 			}
