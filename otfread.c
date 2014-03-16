@@ -133,6 +133,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	{
+		int idx  = cmap_get_glyph_index(cmap, 3, 1, 't');
+		int cset = cff_get_charset(cff->font[0].charset_data, idx);
+		printf("idx %d %d\n", idx, cset);
+		exit(-1);
+	}
+
 	otf_vm(cff, &cff->font[0], 'A');
 
 the_end:

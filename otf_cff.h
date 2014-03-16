@@ -36,6 +36,7 @@ struct charset {
 	uint32_t *glyph;
 };
 struct charset *cff_parse_charset(uint8_t **pp, int nGlyphs);
+int             cff_get_charset(struct charset *r, int index);
 
 /** Private */
 struct s_private {

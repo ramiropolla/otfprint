@@ -282,6 +282,10 @@ struct charset *cff_parse_charset(uint8_t **pp, int nGlyphs)
 
 	return r;
 }
+int cff_get_charset(struct charset *r, int index)
+{
+	return r->glyph[index] - 1;
+}
 
 /**
  ** Private data

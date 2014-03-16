@@ -151,3 +151,45 @@ void cmap_free(struct cmap *cmap)
 {
 	free(cmap);
 }
+int cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph)
+{
+	int i;
+
+	for (i = 0; i < cmap->numTables; i++) {
+		struct cmap_table *table = &cmap->table[i];
+		int j;
+
+		if (table->platformID != platformID || table->encodingID != encodingID)
+			continue;
+
+		if        (table->format == 4) {
+			struct cmap_format_4 *fmt4 = table->fmt4;
+			uint16_t segCount;
+
+			segCount = fmt4->segCountX2 / 2;
+
+			for (j = 0; j < segCount; j++) {
+				if (glyph >= fmt4->startCount[j] && glyph <= fmt4->endCount[j]) {
+					if (!fmt4->idRangeOffset[j]) {
+						return fmt4->idDelta[j] + glyph;
+					} else {
+						/* TODO */
+						fprintf(stderr, "CMAP: (%s) idRangeOffset not implemented\n", __func__);
+						exit(-1);
+					}
+				}
+			}
+		} else if (table->format == 6) {
+			/* TODO */
+			fprintf(stderr, "CMAP: (%s) format 6 not implemented\n", __func__);
+			exit(-1);
+		} else {
+			fprintf(stderr, "CMAP: (%s) only format 4 is supported\n", __func__);
+			exit(-1);
+		}
+	}
+
+	fprintf(stderr, "%s: bad platformID and encodingID\n", __func__);
+	exit(-1);
+	return 0;
+}

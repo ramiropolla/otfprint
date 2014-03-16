@@ -42,3 +42,4 @@ struct cmap {
 struct cmap *cmap_parse(uint8_t *p);
 void         cmap_debug(struct cmap *cmap);
 void         cmap_free(struct cmap *cmap);
+int          cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph);
