@@ -1,3 +1,6 @@
+#ifndef OTF_KERN_H
+#define OTF_KERN_H
+
 #include <inttypes.h>
 
 
@@ -32,3 +35,5 @@ struct kern {
 struct kern *kern_parse(uint8_t *p);
 void         kern_debug(struct kern *kern);
 void         kern_free(struct kern *kern);
+
+#endif /* OTF_KERN_H */

@@ -1,9 +1,9 @@
 
 %.o: %.c
-	gcc -o $@ -c $< -g -O2 -Wall
+	gcc -o $@ -c $< -g3 -O2 -Wall
 
-otf: otfread.o otf_mem.o otf_cff.o otf_vm.o otf_kern.o otf_cmap.o
+otf: otfread.o otf_mem.o otf_cff.o otf_vm.o otf_sid.o otf_kern.o otf_cmap.o
 	gcc -o $@ $^
 
 clean::
-	rm -f *~ otfread.o otf_mem.o otf_cff.o otf_vm.o otf_kern.o otf_cmap.o otf
+	rm -f *~ otfread.o otf_mem.o otf_cff.o otf_vm.o otf_sid.o otf_kern.o otf_cmap.o otf

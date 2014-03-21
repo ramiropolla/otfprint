@@ -1,3 +1,6 @@
+#ifndef OTF_VM_H
+#define OTF_VM_H
+
 struct stack {
 	struct cff_operax *operands[48];
 	int idx;
@@ -18,8 +21,10 @@ struct vm {
 	int width;
 };
 
-int otf_vm(struct cff *cff, struct font *font, uint8_t c);
+int otf_vm(struct cff *cff, struct font *font, int gid);
 struct vm *otf_vm_new(struct cff *cff, struct font *font);
 void otf_vm_free(struct vm *vm);
 void otf_vm_operate(struct vm *vm, int level, struct cff_operax *op);
 void otf_vm_go(struct vm *vm, int level, uint8_t **pp, int size);
+
+#endif /* OTF_VM_H */

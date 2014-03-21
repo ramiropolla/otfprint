@@ -6,7 +6,7 @@ void *x_malloc_(size_t size, const char *func, int line)
 {
 	void *p = malloc(size);
 	if (!p) {
-		fprintf(stderr, "%s no mem (line: %d)\n", func, line);
+		fprintf(stderr, "%s no mem (line: %d, size %d)\n", func, line, (int) size);
 		exit(-1);
 	}
 	return p;
@@ -16,7 +16,7 @@ void *x_calloc_(size_t nmemb, size_t size, const char *func, int line)
 {
 	void *p = calloc(nmemb, size);
 	if (!p) {
-		fprintf(stderr, "%s no mem (line: %d)\n", func, line);
+		fprintf(stderr, "%s no mem (line: %d, size %d)\n", func, line, (int) size);
 		exit(-1);
 	}
 	return p;

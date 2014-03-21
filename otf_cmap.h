@@ -1,3 +1,6 @@
+#ifndef OTF_CMAP_H
+#define OTF_CMAP_H
+
 #include <inttypes.h>
 
 struct cmap_format_6 {
@@ -42,4 +45,6 @@ struct cmap {
 struct cmap *cmap_parse(uint8_t *p);
 void         cmap_debug(struct cmap *cmap);
 void         cmap_free(struct cmap *cmap);
-int          cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph);
+int          cmap_get_gid(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph);
+
+#endif /* OTF_CMAP_H */

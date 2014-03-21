@@ -1,4 +1,9 @@
+#ifndef OTF_CFF_H
+#define OTF_CFF_H
+
 #include <inttypes.h>
+
+struct sid;
 
 /** Operators and Operands */
 enum e_operax {
@@ -36,7 +41,7 @@ struct charset {
 	uint32_t *glyph;
 };
 struct charset *cff_parse_charset(uint8_t **pp, int nGlyphs);
-int             cff_get_charset(struct charset *r, int index);
+int             cff_charset_get_sid(struct charset *r, int index);
 
 /** Private */
 struct s_private {
@@ -103,5 +108,7 @@ struct cff {
 	struct font *font;
 };
 struct cff *cff_parse(uint8_t *p);
-void        cff_debug(struct cff *cff);
+void        cff_debug(struct cff *cff, struct sid *sid);
 void        cff_free(struct cff *cff);
+
+#endif /* OTF_CFF_H */

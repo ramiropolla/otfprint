@@ -1,3 +1,6 @@
+#ifndef OTF_READ_H
+#define OTF_READ_H
+
 #include <inttypes.h>
 
 static inline uint8_t
@@ -66,3 +69,5 @@ get_n_(uint8_t **pp, int n, char *file, int line)
 	return r;
 }
 #define get_n(a,b) get_n_(a,b,__FILE__,__LINE__)
+
+#endif /* OTF_READ_H */

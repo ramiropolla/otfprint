@@ -172,11 +172,10 @@ void otf_vm_go(struct vm *vm, int level, uint8_t **pp, int size)
 	return;
 }
 
-int otf_vm(struct cff *cff, struct font *font, uint8_t c)
+int otf_vm(struct cff *cff, struct font *font, int gid)
 {
 	struct vm *vm = otf_vm_new(cff, font);
-	uint32_t glyph = font->charset_data->glyph[c];
-//	uint32_t glyph = c;
+	uint32_t glyph = font->charset_data->glyph[gid];
 
 	vm->bias = cff->global_subr_idx->count;
 

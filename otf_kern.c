@@ -13,7 +13,6 @@
 struct kern *kern_parse(uint8_t *p)
 {
 	struct kern *kern = calloc(1, sizeof(struct kern));
-	uint8_t *p0 = p;
 	int i;
 
 	kern->version = get_u16(&p);

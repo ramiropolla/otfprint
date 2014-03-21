@@ -55,7 +55,6 @@ struct cmap *cmap_parse(uint8_t *p)
 			fmt4->startCount    = x_calloc(segCount, sizeof(uint16_t));
 			fmt4->idDelta       = x_calloc(segCount, sizeof(uint16_t));
 			fmt4->idRangeOffset = x_calloc(segCount, sizeof(uint16_t));
-			fmt4->glyphIdArray  = x_calloc(segCount, sizeof(uint16_t));
 
 			for (j = 0; j < segCount; j++) fmt4->endCount     [j] = get_u16(&dp);
 			fmt4->reservedPad                                     = get_u16(&dp);
@@ -64,6 +63,7 @@ struct cmap *cmap_parse(uint8_t *p)
 			for (j = 0; j < segCount; j++) fmt4->idRangeOffset[j] = get_u16(&dp);
 
 			nGlyphs = (fmt4->length - (4 * segCount + 8) * sizeof(uint16_t)) / sizeof(uint16_t);
+			fmt4->glyphIdArray  = x_calloc(nGlyphs, sizeof(uint16_t));
 			for (j = 0; j < nGlyphs; j++) fmt4->glyphIdArray [j] = get_u16(&dp);
 
 			table->fmt4 = fmt4;
@@ -151,7 +151,7 @@ void cmap_free(struct cmap *cmap)
 {
 	free(cmap);
 }
-int cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph)
+int cmap_get_gid(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, uint16_t glyph)
 {
 	int i;
 
@@ -187,6 +187,9 @@ int cmap_get_glyph_index(struct cmap *cmap, uint16_t platformID, uint16_t encodi
 			fprintf(stderr, "CMAP: (%s) only format 4 is supported\n", __func__);
 			exit(-1);
 		}
+
+		fprintf(stderr, "CMAP: (%s) glyph not found\n", __func__);
+		return -1;
 	}
 
 	fprintf(stderr, "%s: bad platformID and encodingID\n", __func__);

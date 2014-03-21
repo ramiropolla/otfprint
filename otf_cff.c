@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "otf_sid.h"
 #include "otf_mem.h"
 #include "otf_cff.h"
 #include "otf_read.h"
@@ -276,13 +277,20 @@ struct charset *cff_parse_charset(uint8_t **pp, int nGlyphs)
 
 			count += nLeft + 1;
 		}
+		r->glyph[idx] = 0;
+	} else if (r->format == 2) {
+		fprintf(stderr, "%s: charset format2 not implemented\n", __func__);
+		exit(-1);
+	} else {
+		fprintf(stderr, "%s: bad charset format\n", __func__);
+		exit(-1);
 	}
 
 	*pp = p;
 
 	return r;
 }
-int cff_get_charset(struct charset *r, int index)
+int cff_charset_get_sid(struct charset *r, int index)
 {
 	return r->glyph[index];
 }
@@ -489,7 +497,7 @@ not_impl:
 	fprintf(stderr, "%s: %s not implemented\n", __func__, cff_operator_name(op));
 	exit(-1);
 }
-void cff_debug(struct cff *cff)
+void cff_debug(struct cff *cff, struct sid *sid)
 {
 	int i;
 
@@ -536,6 +544,26 @@ void cff_debug(struct cff *cff)
 			for (ix = 0; ix < op_count; ix++) {
 				printf(" %08x", operands[ix]->v);
 			}
+
+			if (op->flags & ESCAPED) {
+				switch (op->v) {
+				case  0: printf(" '%s'", sid_get(sid, operands[0]->v)); break;
+				case  3: printf(" (%d)",              operands[0]->v ); break;
+				}
+			} else {
+				switch (op->v) {
+				case  0:
+				case  1:
+				case  2:
+				case  3:
+				case  4: printf(" '%s'", sid_get(sid, operands[0]->v)); break;
+				case 15:
+				case 16:
+				case 17:
+				case 18: printf(" (%d)",              operands[0]->v ); break;
+				}
+			}
+
 			printf("\n");
 		}
 		printf("\n");
@@ -614,6 +642,7 @@ void cff_debug(struct cff *cff)
 		if (font->charset) {
 			printf("*** charset (offset %08x)\n", font->charset);
 			printf("\tformat: %d\n", font->charset_data->format);
+			printf("\tcount: %d\n", font->CharStrings_idx->count);
 			for (j = 0; j < font->CharStrings_idx->count; j++) {
 				printf("\t[%d] %d\n", j, font->charset_data->glyph[j]);
 			}
