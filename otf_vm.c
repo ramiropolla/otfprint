@@ -118,16 +118,17 @@ void otf_vm_free(struct vm *vm)
 	free(vm);
 }
 
-void vm_check_width(struct vm *vm)
+int vm_check_width(struct vm *vm, int op_idx)
 {
-	if (!vm->width_set) {
-		struct cff_operax *op = vm_stack_pop(vm->stack);
-		vm->width = op->v;
+	int idx = vm_stack_idx(vm->stack);
+	if (!vm->width_set && idx == (op_idx+1)) {
+		vm->width = vm_stack_peek_value(vm->stack, 0);
 		vm->width_set = 1;
 //		printf("M%d 0", vm->width);
 		printf("\twidth(%d);\n", vm->width);
-		free(op);
+		return 1;
 	}
+	return 0;
 }
 
 static int callgsubr(struct vm *vm, int level)
@@ -172,11 +173,16 @@ static void rmoveto(struct vm *vm)
 {
 	FUNC_IN
 	int dx, dy;
+	int offset = vm_check_width(vm, 2);
+	int idx = vm_stack_idx(vm->stack);
 
-	vm_check_width(vm);
+	if (idx - offset != 2) {
+		printf("\trmoveto with %d items on stack\n", idx - offset);
+		exit(-1);
+	}
 
-	dx = vm_stack_peek_value(vm->stack, 0);
-	dy = vm_stack_peek_value(vm->stack, 1);
+	dx = vm_stack_peek_value(vm->stack, 0 + offset);
+	dy = vm_stack_peek_value(vm->stack, 1 + offset);
 
 	print_move(dx, dy);
 
@@ -186,10 +192,15 @@ static void vmoveto(struct vm *vm)
 {
 	FUNC_IN
 	int dy1;
+	int offset = vm_check_width(vm, 1);
+	int idx = vm_stack_idx(vm->stack);
 
-	vm_check_width(vm);
+	if (idx - offset != 1) {
+		printf("\tvmoveto with %d items on stack\n", idx - offset);
+		exit(-1);
+	}
 
-	dy1 = vm_stack_peek_value(vm->stack, 0);
+	dy1 = vm_stack_peek_value(vm->stack, 0 + offset);
 
 	print_move(0, dy1);
 
@@ -495,6 +506,7 @@ static void rlineto(struct vm *vm)
 }
 static void endchar(struct vm *vm)
 {
+	vm_check_width(vm, 0);
 #ifdef SVG_OUT
 	printf("z\n");
 #else
