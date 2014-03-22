@@ -224,69 +224,74 @@ static void hmoveto(struct vm *vm)
 
 	vm_stack_clear(vm->stack);
 }
+static struct bezier bezier_parse_full(struct vm *vm, int offset)
+{
+	struct bezier b;
+	b.a.x = vm_stack_peek_value(vm->stack, 0 + offset);
+	b.a.y = vm_stack_peek_value(vm->stack, 1 + offset);
+	b.b.x = vm_stack_peek_value(vm->stack, 2 + offset);
+	b.b.y = vm_stack_peek_value(vm->stack, 3 + offset);
+	b.c.x = vm_stack_peek_value(vm->stack, 4 + offset);
+	b.c.y = vm_stack_peek_value(vm->stack, 5 + offset);
+	return b;
+}
+static struct bezier bezier_parse_v(struct vm *vm, int offset)
+{
+	struct bezier b;
+	b.a.x = 0;
+	b.a.y = vm_stack_peek_value(vm->stack, 0 + offset);
+	b.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
+	b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
+	b.c.x = vm_stack_peek_value(vm->stack, 3 + offset);
+	b.c.y = 0;
+	return b;
+}
+static struct bezier bezier_parse_h(struct vm *vm, int offset)
+{
+	struct bezier b;
+	b.a.x = vm_stack_peek_value(vm->stack, 0 + offset);
+	b.a.y = 0;
+	b.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
+	b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
+	b.c.x = 0;
+	b.c.y = vm_stack_peek_value(vm->stack, 3 + offset);
+	return b;
+}
 static void vhcurveto(struct vm *vm)
 {
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
 
-	if        (idx == 4 || idx == 5) {
-		struct bezier b;
-		b.a.x = 0;
-		b.a.y = vm_stack_peek_value(vm->stack, 0);
-		b.b.x = vm_stack_peek_value(vm->stack, 1);
-		b.b.y = vm_stack_peek_value(vm->stack, 2);
-		b.c.x = vm_stack_peek_value(vm->stack, 3);
-		b.c.y = 0;
+	if (((idx%8)&~1) == 4) { /* 4, 5, 12, 13, 20, 21, ... */
+		struct bezier b = bezier_parse_v(vm, 0);
+		int offset = 0;
 		if (idx == 5)
 			b.c.y = vm_stack_peek_value(vm->stack, 4);
 		print_bezier(&b);
-	} else if (idx == 12 || idx == 13) {
-		struct bezier b1, b2, b3;
-		b1.a.x = 0;
-		b1.a.y = vm_stack_peek_value(vm->stack, 0);
-		b1.b.x = vm_stack_peek_value(vm->stack, 1);
-		b1.b.y = vm_stack_peek_value(vm->stack, 2);
-		b1.c.x = vm_stack_peek_value(vm->stack, 3);
-		b1.c.y = 0;
-		b2.a.x = vm_stack_peek_value(vm->stack, 4);
-		b2.a.y = 0;
-		b2.b.x = vm_stack_peek_value(vm->stack, 5);
-		b2.b.y = vm_stack_peek_value(vm->stack, 6);
-		b2.c.x = 0;
-		b2.c.y = vm_stack_peek_value(vm->stack, 7);
-		b3.a.x = 0;
-		b3.a.y = vm_stack_peek_value(vm->stack, 8);
-		b3.b.x = vm_stack_peek_value(vm->stack, 9);
-		b3.b.y = vm_stack_peek_value(vm->stack, 10);
-		b3.c.x = vm_stack_peek_value(vm->stack, 11);
-		b3.c.y = 0;
-		if (idx == 13)
-			b3.c.y = vm_stack_peek_value(vm->stack, 12);
-		print_bezier(&b1);
-		print_bezier(&b2);
-		print_bezier(&b3);
-	} else if (idx ==  8 || idx == 9 || idx == 16 || idx == 17) {
+		offset += 4;
+		idx -= 4;
+
+		while (idx >= 8) {
+			struct bezier b1 = bezier_parse_h(vm, offset);
+			struct bezier b2 = bezier_parse_v(vm, offset + 4);
+			if (idx == 9)
+				b2.c.y = vm_stack_peek_value(vm->stack, 8 + offset);
+			print_bezier(&b1);
+			print_bezier(&b2);
+			offset += 8;
+			idx -= 8;
+		}
+	} else if (!((idx%8)&~1)) { /* 8, 9, 16, 17, ... */
 		int offset = 0;
 		while (idx >= 8) {
-			struct bezier b1, b2;
-			b1.a.x = 0;
-			b1.a.y = vm_stack_peek_value(vm->stack, 0 + offset);
-			b1.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
-			b1.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
-			b1.c.x = vm_stack_peek_value(vm->stack, 3 + offset);
-			b1.c.y = 0;
-			b2.a.x = vm_stack_peek_value(vm->stack, 4 + offset);
-			b2.a.y = 0;
-			b2.b.x = vm_stack_peek_value(vm->stack, 5 + offset);
-			b2.b.y = vm_stack_peek_value(vm->stack, 6 + offset);
-			b2.c.x = 0;
-			b2.c.y = vm_stack_peek_value(vm->stack, 7 + offset);
+			struct bezier b1 = bezier_parse_v(vm, offset);
+			struct bezier b2 = bezier_parse_h(vm, offset + 4);
 			if (idx == 9)
 				b2.c.x = vm_stack_peek_value(vm->stack, 8 + offset);
 			print_bezier(&b1);
 			print_bezier(&b2);
-			idx -= 8;
 			offset += 8;
+			idx -= 8;
 		}
 	} else {
 		printf("\tvhcurveto with %d items on stack\n", idx);
@@ -300,65 +305,37 @@ static void hvcurveto(struct vm *vm)
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
 
-	if        (idx == 4 || idx == 5) {
-		struct bezier b;
-		b.a.x = vm_stack_peek_value(vm->stack, 0);
-		b.a.y = 0;
-		b.b.x = vm_stack_peek_value(vm->stack, 1);
-		b.b.y = vm_stack_peek_value(vm->stack, 2);
-		b.c.x = 0;
-		b.c.y = vm_stack_peek_value(vm->stack, 3);
+	if (((idx%8)&~1) == 4) { /* 4, 5, 12, 13, 20, 21, ... */
+		struct bezier b = bezier_parse_h(vm, 0);
+		int offset = 0;
 		if (idx == 5)
 			b.c.x = vm_stack_peek_value(vm->stack, 4);
 		print_bezier(&b);
-	} else if (idx ==  8 || idx == 9 || idx == 16) {
+		offset += 4;
+		idx -= 4;
+
+		while (idx >= 8) {
+			struct bezier b1 = bezier_parse_v(vm, offset);
+			struct bezier b2 = bezier_parse_h(vm, offset + 4);
+			if (idx == 9)
+				b2.c.x = vm_stack_peek_value(vm->stack, 8 + offset);
+			print_bezier(&b1);
+			print_bezier(&b2);
+			offset += 8;
+			idx -= 8;
+		}
+	} else if (!((idx%8)&~1)) { /* 8, 9, 16, 17, ... */
 		int offset = 0;
 		while (idx >= 8) {
-			struct bezier b1, b2;
-			b1.a.x = vm_stack_peek_value(vm->stack, 0 + offset);
-			b1.a.y = 0;
-			b1.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
-			b1.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
-			b1.c.x = 0;
-			b1.c.y = vm_stack_peek_value(vm->stack, 3 + offset);
-			b2.a.x = 0;
-			b2.a.y = vm_stack_peek_value(vm->stack, 4 + offset);
-			b2.b.x = vm_stack_peek_value(vm->stack, 5 + offset);
-			b2.b.y = vm_stack_peek_value(vm->stack, 6 + offset);
-			b2.c.x = vm_stack_peek_value(vm->stack, 7 + offset);
-			b2.c.y = 0;
+			struct bezier b1 = bezier_parse_h(vm, offset);
+			struct bezier b2 = bezier_parse_v(vm, offset + 4);
 			if (idx == 9)
 				b2.c.y = vm_stack_peek_value(vm->stack, 8 + offset);
 			print_bezier(&b1);
 			print_bezier(&b2);
-			idx -= 8;
 			offset += 8;
+			idx -= 8;
 		}
-	} else if (idx == 12 || idx == 13) {
-		struct bezier b1, b2, b3;
-		b1.a.x = vm_stack_peek_value(vm->stack, 0);
-		b1.a.y = 0;
-		b1.b.x = vm_stack_peek_value(vm->stack, 1);
-		b1.b.y = vm_stack_peek_value(vm->stack, 2);
-		b1.c.x = 0;
-		b1.c.y = vm_stack_peek_value(vm->stack, 3);
-		b2.a.x = 0;
-		b2.a.y = vm_stack_peek_value(vm->stack, 4);
-		b2.b.x = vm_stack_peek_value(vm->stack, 5);
-		b2.b.y = vm_stack_peek_value(vm->stack, 6);
-		b2.c.x = vm_stack_peek_value(vm->stack, 7);
-		b2.c.y = 0;
-		b3.a.x = vm_stack_peek_value(vm->stack, 8);
-		b3.a.y = 0;
-		b3.b.x = vm_stack_peek_value(vm->stack, 9);
-		b3.b.y = vm_stack_peek_value(vm->stack, 10);
-		b3.c.x = 0;
-		b3.c.y = vm_stack_peek_value(vm->stack, 11);
-		if (idx == 13)
-			b3.c.x = vm_stack_peek_value(vm->stack, 12);
-		print_bezier(&b1);
-		print_bezier(&b2);
-		print_bezier(&b3);
 	} else {
 		printf("\thvcurveto with %d items on stack\n", idx);
 		exit(-1);
@@ -370,19 +347,18 @@ static void rrcurveto(struct vm *vm)
 {
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
+	int offset = 0;
 
-	if        (idx ==  6) {
-		struct bezier b;
-		b.a.x = vm_stack_peek_value(vm->stack, 0);
-		b.a.y = vm_stack_peek_value(vm->stack, 1);
-		b.b.x = vm_stack_peek_value(vm->stack, 2);
-		b.b.y = vm_stack_peek_value(vm->stack, 3);
-		b.c.x = vm_stack_peek_value(vm->stack, 4);
-		b.c.y = vm_stack_peek_value(vm->stack, 5);
-		print_bezier(&b);
-	} else {
+	if (idx%6) {
 		printf("\trrcurveto with %d items on stack\n", idx);
 		exit(-1);
+	}
+
+	while (idx >= 6) {
+		struct bezier b = bezier_parse_full(vm, offset);
+		print_bezier(&b);
+		offset += 6;
+		idx -= 6;
 	}
 
 	vm_stack_clear(vm->stack);
@@ -391,24 +367,47 @@ static void rcurveline(struct vm *vm)
 {
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
+	int offset = 0;
+	int dx, dy;
 
-	if        (idx ==  8) {
-		struct bezier b;
-		int dx, dy;
-		b.a.x = vm_stack_peek_value(vm->stack, 0);
-		b.a.y = vm_stack_peek_value(vm->stack, 1);
-		b.b.x = vm_stack_peek_value(vm->stack, 2);
-		b.b.y = vm_stack_peek_value(vm->stack, 3);
-		b.c.x = vm_stack_peek_value(vm->stack, 4);
-		b.c.y = vm_stack_peek_value(vm->stack, 5);
-		dx = vm_stack_peek_value(vm->stack, 6);
-		dy = vm_stack_peek_value(vm->stack, 7);
-		print_bezier(&b);
-		print_line(dx, dy);
-	} else {
+	if (idx < 8 || (idx%6) != 2) {
 		printf("\trcurveline with %d items on stack\n", idx);
 		exit(-1);
 	}
+
+	while (idx > 6) {
+		struct bezier b = bezier_parse_full(vm, offset);
+		print_bezier(&b);
+		offset += 6;
+		idx -= 6;
+	}
+	dx = vm_stack_peek_value(vm->stack, 0 + offset);
+	dy = vm_stack_peek_value(vm->stack, 1 + offset);
+	print_line(dx, dy);
+
+	vm_stack_clear(vm->stack);
+}
+static void rlinecurve(struct vm *vm)
+{
+	FUNC_IN
+	int idx = vm_stack_idx(vm->stack);
+	int offset = 0;
+	struct bezier b;
+
+	if (idx < 8 || idx&1) {
+		printf("\trlinecurve with %d items on stack\n", idx);
+		exit(-1);
+	}
+	while (idx > 6) {
+		int dx, dy;
+		dx = vm_stack_peek_value(vm->stack, 0 + offset);
+		dy = vm_stack_peek_value(vm->stack, 1 + offset);
+		print_line(dx, dy);
+		offset += 2;
+		idx -= 2;
+	}
+	b = bezier_parse_full(vm, offset);
+	print_bezier(&b);
 
 	vm_stack_clear(vm->stack);
 }
@@ -416,22 +415,29 @@ static void hhcurveto(struct vm *vm)
 {
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
+	int offset = 0;
 
-	if        (idx == 4 || idx ==  5) {
-		int offset = (idx == 5);
+	if (idx < 4 || ((idx%4)&~1)) { /* 4, 5, 8, 9, ... */
+		printf("\thhcurveto with %d items on stack\n", idx);
+		exit(-1);
+	}
+
+	while (idx >= 4) {
 		struct bezier b;
-		b.a.x = vm_stack_peek_value(vm->stack, 0 + offset);
 		b.a.y = 0;
-		if (offset)
+		if (idx&1) {
 			b.a.y = vm_stack_peek_value(vm->stack, 0);
+			offset++;
+			idx--;
+		}
+		b.a.x = vm_stack_peek_value(vm->stack, 0 + offset);
 		b.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
 		b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
 		b.c.x = vm_stack_peek_value(vm->stack, 3 + offset);
 		b.c.y = 0;
 		print_bezier(&b);
-	} else {
-		printf("\thhcurveto with %d items on stack\n", idx);
-		exit(-1);
+		offset += 4;
+		idx -= 4;
 	}
 
 	vm_stack_clear(vm->stack);
@@ -440,29 +446,29 @@ static void vvcurveto(struct vm *vm)
 {
 	FUNC_IN
 	int idx = vm_stack_idx(vm->stack);
+	int offset = 0;
 
-	if        (idx == 4 || idx == 5 || idx == 8 || idx == 9) {
-		int offset = 0;
-		while (idx >= 4) {
-			struct bezier b;
-			b.a.x = 0;
-			if (idx&1) {
-				b.a.x = vm_stack_peek_value(vm->stack, 0);
-				offset++;
-				idx--;
-			}
-			b.a.y = vm_stack_peek_value(vm->stack, 0 + offset);
-			b.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
-			b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
-			b.c.x = 0;
-			b.c.y = vm_stack_peek_value(vm->stack, 3 + offset);
-			print_bezier(&b);
-			idx -= 4;
-			offset += 4;
-		}
-	} else {
+	if (idx < 4 || ((idx%4)&~1)) { /* 4, 5, 8, 9, ... */
 		printf("\tvvcurveto with %d items on stack\n", idx);
 		exit(-1);
+	}
+
+	while (idx >= 4) {
+		struct bezier b;
+		b.a.x = 0;
+		if (idx&1) {
+			b.a.x = vm_stack_peek_value(vm->stack, 0);
+			offset++;
+			idx--;
+		}
+		b.a.y = vm_stack_peek_value(vm->stack, 0 + offset);
+		b.b.x = vm_stack_peek_value(vm->stack, 1 + offset);
+		b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
+		b.c.x = 0;
+		b.c.y = vm_stack_peek_value(vm->stack, 3 + offset);
+		print_bezier(&b);
+		offset += 4;
+		idx -= 4;
 	}
 
 	vm_stack_clear(vm->stack);
@@ -548,15 +554,16 @@ int otf_vm_operate(struct vm *vm, int level, struct cff_operax *op)
 		case  6: hlineto(vm);          break;
 		case  7: vlineto(vm);          break;
 		case  8: rrcurveto(vm);        break;
-		case 10: if (callsubr(vm, level) == 2) r = 1; break;
+		case 10: if (callsubr(vm, level) == 2) r = 2; break;
 		case 11: /* printf(">>return\n"); */ r = 1; break;
 		case 14: endchar(vm); r = 2;   break;
 		case 21: rmoveto(vm);          break;
 		case 22: hmoveto(vm);          break;
 		case 24: rcurveline(vm);       break;
+		case 25: rlinecurve(vm);       break;
 		case 26: vvcurveto(vm);        break;
 		case 27: hhcurveto(vm);        break;
-		case 29: if (callgsubr(vm, level) == 2) r = 1; break;
+		case 29: if (callgsubr(vm, level) == 2) r = 2; break;
 		case 30: vhcurveto(vm);        break;
 		case 31: hvcurveto(vm);        break;
 		default: goto not_impl;
@@ -618,7 +625,7 @@ int otf_vm(struct cff *cff, struct font *font, int gid)
 	if (font->local_subr_idx)
 		vm->lbias = subr_bias(font->local_subr_idx->count);
 
-	printf("*** OTF_VM\n");
+	printf("*** OTF_VM (gid %d)\n", gid);
 	printf("cs count: %d\n", font->CharStrings_idx->count);
 
 	uint8_t *cs_p    = font->CharStrings_idx->data          + font->CharStrings_idx->offset[gid] - 1;
