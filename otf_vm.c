@@ -206,6 +206,24 @@ static void vmoveto(struct vm *vm)
 
 	vm_stack_clear(vm->stack);
 }
+static void hmoveto(struct vm *vm)
+{
+	FUNC_IN
+	int dx1;
+	int offset = vm_check_width(vm, 1);
+	int idx = vm_stack_idx(vm->stack);
+
+	if (idx - offset != 1) {
+		printf("\thmoveto with %d items on stack\n", idx - offset);
+		exit(-1);
+	}
+
+	dx1 = vm_stack_peek_value(vm->stack, 0 + offset);
+
+	print_move(dx1, 0);
+
+	vm_stack_clear(vm->stack);
+}
 static void vhcurveto(struct vm *vm)
 {
 	FUNC_IN
@@ -534,6 +552,7 @@ int otf_vm_operate(struct vm *vm, int level, struct cff_operax *op)
 		case 11: /* printf(">>return\n"); */ r = 1; break;
 		case 14: endchar(vm); r = 2;   break;
 		case 21: rmoveto(vm);          break;
+		case 22: hmoveto(vm);          break;
 		case 24: rcurveline(vm);       break;
 		case 26: vvcurveto(vm);        break;
 		case 27: hhcurveto(vm);        break;
