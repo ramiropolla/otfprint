@@ -36,7 +36,15 @@ struct cmap *cmap_parse(uint8_t *p)
 
 		table->format = get_u16(&dp);
 
-		if        (table->format == 4) {
+		if        (table->format == 0) {
+			struct cmap_format_0 *fmt0 = x_calloc(1, sizeof(struct cmap_format_0));
+
+			fmt0->length   = get_u16(&dp);
+			fmt0->language = get_u16(&dp);
+			for (j = 0; j < 256; j++) fmt0->glyphIdArray[j] = get_u8(&dp);
+
+			table->fmt0 = fmt0;
+		} else if (table->format == 4) {
 			struct cmap_format_4 *fmt4 = x_calloc(1, sizeof(struct cmap_format_4));
 			uint16_t segCount;
 			int nGlyphs;
@@ -80,7 +88,7 @@ struct cmap *cmap_parse(uint8_t *p)
 
 			table->fmt6 = fmt6;
 		} else {
-			fprintf(stderr, "CMAP: (%s) only formats 4 and 6 are supported\n", __func__);
+			fprintf(stderr, "CMAP: (%s) only formats 0, 4 and 6 are supported (%d)\n", __func__, table->format);
 			exit(-1);
 		}
 	}
@@ -162,7 +170,11 @@ int cmap_get_gid(struct cmap *cmap, uint16_t platformID, uint16_t encodingID, ui
 		if (table->platformID != platformID || table->encodingID != encodingID)
 			continue;
 
-		if        (table->format == 4) {
+		if        (table->format == 0) {
+			struct cmap_format_0 *fmt0 = table->fmt0;
+
+			return fmt0->glyphIdArray[glyph];
+		} else if (table->format == 4) {
 			struct cmap_format_4 *fmt4 = table->fmt4;
 			uint16_t segCount;
 

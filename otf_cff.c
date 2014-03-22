@@ -8,6 +8,20 @@
 #include "otf_cff.h"
 #include "otf_read.h"
 
+static const char *parse_real(uint8_t c)
+{
+	const char *table[] = {
+		"0", "1", "2", "3", "4", "5", "6", "7",
+		"8", "9", ".", "E", "E-", "", "-", "",
+	};
+	if (c == 0x0d) {
+		fprintf(stderr, "real number used 0x0d reserved\n");
+		exit(-1);
+	}
+
+	return table[c];
+}
+
 /**
  ** operax
  **/
@@ -35,7 +49,7 @@ struct cff_operax *cff_parse_operax(uint8_t **pp)
 		r->type = OPERAX_OPERAND;
 		r->bytes = 2;
 	} else if (b0 >= 251 && b0 <= 254) {
-		r->v = -(b0-251)*256 + get_u8(&p) - 108;
+		r->v = -(b0-251)*256 - get_u8(&p) - 108;
 		r->type = OPERAX_OPERAND;
 		r->bytes = 2;
 	} else if (b0 == 28) {
@@ -51,9 +65,26 @@ struct cff_operax *cff_parse_operax(uint8_t **pp)
 		r->type = OPERAX_OPERAND;
 		r->bytes = 5;
 	} else if (b0 == 30) {
-		r->v = 0; /* GCC shut up */
-		fprintf(stderr, "ERROR: %s (implement real value reader)\n", __func__);
-		exit(1);
+		char tmp[0x100] = { 0 };
+		double v = 0;
+		uint8_t u;
+		int bytes = 0;
+
+		do {
+			const char *s;
+			u = get_u8(&p);
+			s = parse_real((u & 0xf0) >> 4);
+			strcat(tmp, s);
+			s = parse_real((u & 0x0f) >> 0);
+			strcat(tmp, s);
+			bytes++;
+		} while ((u & 0x0f) != 0x0f);
+
+		sscanf(tmp, "%lE", &v);
+		r->d = v;
+		r->type = OPERAX_OPERAND;
+		r->flags |= OPDOUBLE;
+		r->bytes = bytes;
 	} else {
 		r->v = 0; /* GCC shut up */
 		fprintf(stderr, "ERROR: %s\n", __func__);
@@ -69,6 +100,7 @@ const char *cff_operator_name(struct cff_operax *op)
 	if (op->flags & ESCAPED) {
 		switch (op->v) {
 		case  0: return "Copyright";
+		case  1: return "isFixedPitch";
 		case  3: return "UnderlinePosition";
 		case  9: return "BlueScale";
 		case 10: return "BlueShift";
@@ -103,6 +135,8 @@ const char *cff_operator_name(struct cff_operax *op)
 		case 21: return "nominalWidthX";
 		}
 	}
+	fprintf(stderr, "%s: op->v %d not implemented\n", __func__, op->v);
+	exit(-1);
 	return "WTF";
 }
 
@@ -138,7 +172,7 @@ struct cff_operax *cff_type2_parse_operax(uint8_t **pp)
 		r->type = OPERAX_OPERAND;
 		r->bytes = 2;
 	} else if (b0 >= 251 && b0 <= 254) {
-		r->v = -(b0-251)*256 + get_u8(&p) - 108;
+		r->v = -(b0-251)*256 - get_u8(&p) - 108;
 		r->type = OPERAX_OPERAND;
 		r->bytes = 2;
 	} else if (b0 == 255) {
@@ -216,17 +250,19 @@ struct cff_index_data *cff_parse_index_data(uint8_t **pp)
 	r->count   = get_u16(&p);
 	r->offSize = get_u8(&p);
 
-	r->offset = x_malloc((r->count+1) * sizeof(uint32_t));
+	if (r->count) {
+		r->offset = x_malloc((r->count+1) * sizeof(uint32_t));
 
-	for (i = 0; i <= r->count; i++) {
-		r->offset[i] = get_n(&p, r->offSize);
-		last_offset = r->offset[i];
-	}
+		for (i = 0; i <= r->count; i++) {
+			r->offset[i] = get_n(&p, r->offSize);
+			last_offset = r->offset[i];
+		}
 
-	if (last_offset != 1) {
-		r->data = x_malloc(last_offset);
-		memcpy(r->data, p, last_offset);
-		p += last_offset-1;
+		if (last_offset != 1) {
+			r->data = x_malloc(last_offset);
+			memcpy(r->data, p, last_offset);
+			p += last_offset-1;
+		}
 	}
 
 	*pp = p;
@@ -328,7 +364,7 @@ struct s_private *cff_parse_private_data(uint8_t **pp, int size)
 			case 13: r->StemSnapV         = operands[0]->v; break;
 			case 14: r->ForceBold         = operands[0]->v; break;
 			case 17: r->LanguageGroup     = operands[0]->v; break;
-			case 18: r->ExpansionFactor   = operands[0]->v; break;
+			case 18: r->ExpansionFactor   = operands[0]->d; break;
 			case 19: r->initialRandomSeed = operands[0]->v; break;
 			default: goto not_impl;
 			}
@@ -415,7 +451,8 @@ struct cff *cff_parse(uint8_t *p)
 			if (op->flags & ESCAPED) {
 				switch (op->v) {
 				case  0: cff->font[i].Copyright         = operands[0]->v; break;
-				case  3: cff->font[i].UnderlinePosition = operands[0]->v; break;;
+				case  1: cff->font[i].isFixedPitch      = operands[0]->v; break;
+				case  3: cff->font[i].UnderlinePosition = operands[0]->v; break;
 				default: goto not_impl;
 				}
 			} else {
@@ -542,7 +579,10 @@ void cff_debug(struct cff *cff, struct sid *sid)
 
 			printf("operator: (%c%d) %s | operands:", op->flags & ESCAPED ? 'x' : ' ', op->v, cff_operator_name(op));
 			for (ix = 0; ix < op_count; ix++) {
-				printf(" %08x", operands[ix]->v);
+				if (operands[ix]->flags | OPDOUBLE)
+					printf(" %le", operands[ix]->d);
+				else
+					printf(" %08x", operands[ix]->v);
 			}
 
 			if (op->flags & ESCAPED) {
@@ -604,7 +644,7 @@ void cff_debug(struct cff *cff, struct sid *sid)
 		printf("\tCharStrings %08x\n", font->CharStrings);
 		printf("\tPrivate     %08x\n", font->Private[1]);
 
-#if 1-1
+#if 0
 		if (font->CharStrings_idx) {
 			printf("*** CharStrings index (offset %08x size %08x)\n", font->CharStrings, font->CharStrings_idx->offset[font->CharStrings_idx->count]);
 			printf("\tcount %d\n", font->CharStrings_idx->count);
@@ -675,7 +715,10 @@ void cff_debug(struct cff *cff, struct sid *sid)
 
 				printf("operator: (%c%d) %s | operands:", op->flags & ESCAPED ? 'x' : ' ', op->v, cff_operator_name(op));
 				for (ix = 0; ix < op_count; ix++) {
-					printf(" %08x", operands[ix]->v);
+					if (operands[ix]->flags & OPDOUBLE)
+						printf(" %le", operands[ix]->d);
+					else
+						printf(" %08x", operands[ix]->v);
 				}
 				printf("\n");
 

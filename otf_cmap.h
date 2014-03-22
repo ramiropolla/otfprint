@@ -26,12 +26,19 @@ struct cmap_format_4 {
 	uint16_t *glyphIdArray;
 };
 
+struct cmap_format_0 {
+	uint16_t length;
+	uint16_t language;
+	uint8_t glyphIdArray[256];
+};
+
 struct cmap_table {
 	uint16_t platformID;
 	uint16_t encodingID;
 	uint32_t offset;
 
 	uint16_t format;
+	struct cmap_format_0 *fmt0;
 	struct cmap_format_4 *fmt4;
 	struct cmap_format_6 *fmt6;
 };

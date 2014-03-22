@@ -11,6 +11,7 @@ enum e_operax {
 	OPERAX_OPERATOR,
 };
 #define ESCAPED (1<<0)
+#define OPDOUBLE (1<<1)
 struct cff_operax {
 	enum e_operax type;
 	int flags;
@@ -58,7 +59,7 @@ struct s_private {
 	uint32_t StemSnapV;
 	uint32_t ForceBold;
 	uint32_t LanguageGroup;
-	uint32_t ExpansionFactor;
+	double   ExpansionFactor;
 	uint32_t initialRandomSeed;
 	uint32_t Subrs; /* offset */
 	uint32_t defaultWidthX;
@@ -75,6 +76,7 @@ struct font {
 	uint32_t Weight; /* SID */
 
 	uint32_t UnderlinePosition; /* number */
+	int isFixedPitch; /* boolean */
 
 	uint32_t charset; /* offset */
 	uint32_t Encoding; /* offset */
