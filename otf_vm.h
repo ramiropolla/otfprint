@@ -22,6 +22,11 @@ struct vm {
 
 	int width_set;
 	int width;
+
+	char *path;
+	int path_size;
+	int path_left;
+	int path_offset;
 };
 
 int otf_vm(struct cff *cff, struct font *font, int gid);

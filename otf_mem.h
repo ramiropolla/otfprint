@@ -10,4 +10,7 @@ void *x_malloc_(size_t size, const char *func, int line);
 void *x_calloc_(size_t nmemb, size_t size, const char *func, int line);
 #define x_calloc(a,b) x_calloc_(a,b,__func__,__LINE__)
 
+void *x_realloc_(void *ptr, size_t size, const char *func, int line);
+#define x_realloc(a,b) x_realloc_(a,b,__func__,__LINE__)
+
 #endif /* OTF_MEM_H */

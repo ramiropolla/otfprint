@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "otf_mem.h"
 #include "otf_cff.h"
@@ -25,13 +26,49 @@ struct bezier {
 	struct xy b;
 	struct xy c;
 };
-static void print_bezier(struct bezier *b)
+static void path_double(struct vm *vm)
+{
+	int newsize = vm->path_size << 1;
+
+	vm->path = x_realloc(vm->path, newsize);
+
+	vm->path_left += vm->path_size;
+	vm->path_size = newsize;
+}
+static void path_append(struct vm *vm, char *str, int len)
+{
+	while (vm->path_left <= len)
+		path_double(vm);
+	memcpy(vm->path + vm->path_offset, str, len);
+	vm->path_offset += len;
+	vm->path_left -= len;
+	vm->path[vm->path_offset] = 0;
+}
+static void path_printf(struct vm *vm, const char *fmt, ...)
+{
+	char *str = NULL;
+	int len;
+
+	va_list ap, apx;
+	va_start(ap, fmt);
+	va_copy(apx, ap);
+
+	len = vsnprintf(str, 0, fmt, ap);
+	str = x_malloc(len+1);
+	vsnprintf(str, len+1, fmt, apx);
+	path_append(vm, str, len);
+	free(str);
+
+	va_end(apx);
+	va_end(ap);
+}
+static void print_bezier(struct vm *vm, struct bezier *b)
 {
 #ifdef SVG_OUT
-	printf("c%d %d %d %d %d %d",
-	       b->a.x, b->a.y,
-	       b->b.x + b->a.x, b->b.y + b->a.y,
-	       b->c.x + b->b.x + b->a.x, b->c.y + b->b.y + b->a.y);
+	path_printf(vm, "c%d %d %d %d %d %d",
+	            b->a.x, b->a.y,
+	            b->b.x + b->a.x, b->b.y + b->a.y,
+	            b->c.x + b->b.x + b->a.x, b->c.y + b->b.y + b->a.y);
 #else
 	printf("\tbezier[%d,%d %d,%d %d,%d]\n",
 	       b->a.x, b->a.y,
@@ -40,20 +77,23 @@ static void print_bezier(struct bezier *b)
 //	printf("\tbezier[%d,%d %d,%d %d,%d]\n", b->a.x, b->a.y, b->b.x, b->b.y, b->c.x, b->c.y);
 #endif
 }
-static void print_line(int dx, int dy)
+static void print_line(struct vm *vm, int dx, int dy)
 {
 #ifdef SVG_OUT
-	if      (!dx) printf("v%d", dy);
-	else if (!dy) printf("h%d", dx);
-	else          printf("l%d %d", dx, dy);
+	if      (!dx) path_printf(vm, "v%d", dy);
+	else if (!dy) path_printf(vm, "h%d", dx);
+	else          path_printf(vm, "l%d %d", dx, dy);
 #else
 	printf("\tline[%d,%d]\n", dx, dy);
 #endif
 }
-static void print_move(int dx, int dy)
+static void print_move(struct vm *vm, int dx, int dy)
 {
 #ifdef SVG_OUT
-	printf("m%d %d", dx, dy);
+	if (vm->path[0])
+		path_printf(vm, "m%d %d", dx, dy);
+	else
+		path_printf(vm, "M%d %d", dx, dy);
 #else
 	printf("\tmove[%d, %d]\n", dx, dy);
 #endif
@@ -110,11 +150,19 @@ struct vm *otf_vm_new(struct cff *cff, struct font *font)
 	vm->font = font;
 	vm->cff = cff;
 
+	vm->width = vm->font->private_data->defaultWidthX;
+
+	vm->path_size = 32;
+	vm->path_left = vm->path_size;
+	path_double(vm);
+	vm->path[0] = 0;
+
 	return vm;
 }
 void otf_vm_free(struct vm *vm)
 {
 	free(vm->stack);
+	free(vm->path);
 	free(vm);
 }
 
@@ -122,10 +170,9 @@ int vm_check_width(struct vm *vm, int op_idx)
 {
 	int idx = vm_stack_idx(vm->stack);
 	if (!vm->width_set && idx == (op_idx+1)) {
-		vm->width = vm_stack_peek_value(vm->stack, 0);
+		vm->width = vm->font->private_data->nominalWidthX
+		          + vm_stack_peek_value(vm->stack, 0);
 		vm->width_set = 1;
-//		printf("M%d 0", vm->width);
-		printf("\twidth(%d);\n", vm->width);
 		return 1;
 	}
 	return 0;
@@ -184,7 +231,7 @@ static void rmoveto(struct vm *vm)
 	dx = vm_stack_peek_value(vm->stack, 0 + offset);
 	dy = vm_stack_peek_value(vm->stack, 1 + offset);
 
-	print_move(dx, dy);
+	print_move(vm, dx, dy);
 
 	vm_stack_clear(vm->stack);
 }
@@ -202,7 +249,7 @@ static void vmoveto(struct vm *vm)
 
 	dy1 = vm_stack_peek_value(vm->stack, 0 + offset);
 
-	print_move(0, dy1);
+	print_move(vm, 0, dy1);
 
 	vm_stack_clear(vm->stack);
 }
@@ -220,7 +267,7 @@ static void hmoveto(struct vm *vm)
 
 	dx1 = vm_stack_peek_value(vm->stack, 0 + offset);
 
-	print_move(dx1, 0);
+	print_move(vm, dx1, 0);
 
 	vm_stack_clear(vm->stack);
 }
@@ -267,7 +314,7 @@ static void vhcurveto(struct vm *vm)
 		int offset = 0;
 		if (idx == 5)
 			b.c.y = vm_stack_peek_value(vm->stack, 4);
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 4;
 		idx -= 4;
 
@@ -276,8 +323,8 @@ static void vhcurveto(struct vm *vm)
 			struct bezier b2 = bezier_parse_v(vm, offset + 4);
 			if (idx == 9)
 				b2.c.y = vm_stack_peek_value(vm->stack, 8 + offset);
-			print_bezier(&b1);
-			print_bezier(&b2);
+			print_bezier(vm, &b1);
+			print_bezier(vm, &b2);
 			offset += 8;
 			idx -= 8;
 		}
@@ -288,8 +335,8 @@ static void vhcurveto(struct vm *vm)
 			struct bezier b2 = bezier_parse_h(vm, offset + 4);
 			if (idx == 9)
 				b2.c.x = vm_stack_peek_value(vm->stack, 8 + offset);
-			print_bezier(&b1);
-			print_bezier(&b2);
+			print_bezier(vm, &b1);
+			print_bezier(vm, &b2);
 			offset += 8;
 			idx -= 8;
 		}
@@ -310,7 +357,7 @@ static void hvcurveto(struct vm *vm)
 		int offset = 0;
 		if (idx == 5)
 			b.c.x = vm_stack_peek_value(vm->stack, 4);
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 4;
 		idx -= 4;
 
@@ -319,8 +366,8 @@ static void hvcurveto(struct vm *vm)
 			struct bezier b2 = bezier_parse_h(vm, offset + 4);
 			if (idx == 9)
 				b2.c.x = vm_stack_peek_value(vm->stack, 8 + offset);
-			print_bezier(&b1);
-			print_bezier(&b2);
+			print_bezier(vm, &b1);
+			print_bezier(vm, &b2);
 			offset += 8;
 			idx -= 8;
 		}
@@ -331,8 +378,8 @@ static void hvcurveto(struct vm *vm)
 			struct bezier b2 = bezier_parse_v(vm, offset + 4);
 			if (idx == 9)
 				b2.c.y = vm_stack_peek_value(vm->stack, 8 + offset);
-			print_bezier(&b1);
-			print_bezier(&b2);
+			print_bezier(vm, &b1);
+			print_bezier(vm, &b2);
 			offset += 8;
 			idx -= 8;
 		}
@@ -356,7 +403,7 @@ static void rrcurveto(struct vm *vm)
 
 	while (idx >= 6) {
 		struct bezier b = bezier_parse_full(vm, offset);
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 6;
 		idx -= 6;
 	}
@@ -377,13 +424,13 @@ static void rcurveline(struct vm *vm)
 
 	while (idx > 6) {
 		struct bezier b = bezier_parse_full(vm, offset);
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 6;
 		idx -= 6;
 	}
 	dx = vm_stack_peek_value(vm->stack, 0 + offset);
 	dy = vm_stack_peek_value(vm->stack, 1 + offset);
-	print_line(dx, dy);
+	print_line(vm, dx, dy);
 
 	vm_stack_clear(vm->stack);
 }
@@ -402,12 +449,12 @@ static void rlinecurve(struct vm *vm)
 		int dx, dy;
 		dx = vm_stack_peek_value(vm->stack, 0 + offset);
 		dy = vm_stack_peek_value(vm->stack, 1 + offset);
-		print_line(dx, dy);
+		print_line(vm, dx, dy);
 		offset += 2;
 		idx -= 2;
 	}
 	b = bezier_parse_full(vm, offset);
-	print_bezier(&b);
+	print_bezier(vm, &b);
 
 	vm_stack_clear(vm->stack);
 }
@@ -435,7 +482,7 @@ static void hhcurveto(struct vm *vm)
 		b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
 		b.c.x = vm_stack_peek_value(vm->stack, 3 + offset);
 		b.c.y = 0;
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 4;
 		idx -= 4;
 	}
@@ -466,7 +513,7 @@ static void vvcurveto(struct vm *vm)
 		b.b.y = vm_stack_peek_value(vm->stack, 2 + offset);
 		b.c.x = 0;
 		b.c.y = vm_stack_peek_value(vm->stack, 3 + offset);
-		print_bezier(&b);
+		print_bezier(vm, &b);
 		offset += 4;
 		idx -= 4;
 	}
@@ -482,9 +529,9 @@ static void vlineto(struct vm *vm)
 	while (idx--) {
 		int val = vm_stack_peek_value(vm->stack, offset++);
 		if (offset&1) {
-			print_line(0, val);
+			print_line(vm, 0, val);
 		} else {
-			print_line(val, 0);
+			print_line(vm, val, 0);
 		}
 	}
 
@@ -499,9 +546,9 @@ static void hlineto(struct vm *vm)
 	while (idx--) {
 		int val = vm_stack_peek_value(vm->stack, offset++);
 		if (offset&1) {
-			print_line(val, 0);
+			print_line(vm, val, 0);
 		} else {
-			print_line(0, val);
+			print_line(vm, 0, val);
 		}
 	}
 
@@ -521,7 +568,7 @@ static void rlineto(struct vm *vm)
 	while (idx >= 2) {
 		int dx = vm_stack_peek_value(vm->stack, 0 + offset);
 		int dy = vm_stack_peek_value(vm->stack, 1 + offset);
-		print_line(dx, dy);
+		print_line(vm, dx, dy);
 		offset += 2;
 		idx -= 2;
 	}
@@ -532,7 +579,7 @@ static void endchar(struct vm *vm)
 {
 	vm_check_width(vm, 0);
 #ifdef SVG_OUT
-	printf("z\n");
+	path_printf(vm, "z\n");
 #else
 	printf("\tendchar\n");
 #endif
@@ -632,6 +679,9 @@ int otf_vm(struct cff *cff, struct font *font, int gid)
 	int      cs_size = font->CharStrings_idx->offset[gid+1] - font->CharStrings_idx->offset[gid] + 1;
 
 	otf_vm_go(vm, 0, &cs_p, cs_size);
+
+	printf("width %d\n", vm->width);
+	printf("<path d=\"%s\" />", vm->path);
 
 	otf_vm_free(vm);
 
