@@ -681,7 +681,7 @@ int otf_vm(struct cff *cff, struct font *font, int gid)
 	otf_vm_go(vm, 0, &cs_p, cs_size);
 
 	printf("width %d\n", vm->width);
-	printf("<path d=\"%s\" />", vm->path);
+	printf("<path d=\"%s\" />\n", vm->path);
 
 	otf_vm_free(vm);
 
