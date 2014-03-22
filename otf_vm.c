@@ -579,7 +579,7 @@ static void endchar(struct vm *vm)
 {
 	vm_check_width(vm, 0);
 #ifdef SVG_OUT
-	path_printf(vm, "z\n");
+	path_printf(vm, "z");
 #else
 	printf("\tendchar\n");
 #endif
