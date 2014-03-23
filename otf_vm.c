@@ -662,9 +662,10 @@ static int subr_bias(int n)
 		return 1131;
 	return 32768;
 }
-int otf_vm(struct cff *cff, struct font *font, int gid)
+struct glyph *otf_vm(struct cff *cff, struct font *font, int gid)
 {
 	struct vm *vm = otf_vm_new(cff, font);
+	struct glyph *glyph;
 
 	gid++;
 
@@ -672,18 +673,16 @@ int otf_vm(struct cff *cff, struct font *font, int gid)
 	if (font->local_subr_idx)
 		vm->lbias = subr_bias(font->local_subr_idx->count);
 
-	printf("*** OTF_VM (gid %d)\n", gid);
-	printf("cs count: %d\n", font->CharStrings_idx->count);
-
 	uint8_t *cs_p    = font->CharStrings_idx->data          + font->CharStrings_idx->offset[gid] - 1;
 	int      cs_size = font->CharStrings_idx->offset[gid+1] - font->CharStrings_idx->offset[gid] + 1;
 
 	otf_vm_go(vm, 0, &cs_p, cs_size);
 
-	printf("width %d\n", vm->width);
-	printf("<path d=\"%s\" />\n", vm->path);
+	glyph = x_malloc(sizeof(struct glyph));
+	glyph->path = strdup(vm->path);
+	glyph->width = vm->width;
 
 	otf_vm_free(vm);
 
-	return 0;
+	return glyph;
 }

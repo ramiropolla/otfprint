@@ -53,6 +53,22 @@ struct kern *kern_parse(uint8_t *p)
 
 	return kern;
 }
+int kern_get(struct kern *kern, uint16_t l, uint16_t r)
+{
+	int i;
+
+	for (i = 0; i < kern->nTables; i++) {
+		struct kern_table *table = &kern->table[i];
+		struct kern_format_0 *fmt0 = table->fmt0;
+		int j;
+
+		for (j = 0; j < fmt0->nPairs; j++)
+			if (l == fmt0->pair[j].left && r == fmt0->pair[j].right)
+				return fmt0->pair[j].value;
+	}
+
+	return 0;
+}
 void kern_debug(struct kern *kern)
 {
 	int i;

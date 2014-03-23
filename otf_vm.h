@@ -29,7 +29,13 @@ struct vm {
 	int path_offset;
 };
 
-int otf_vm(struct cff *cff, struct font *font, int gid);
+struct glyph {
+	char *path;
+	int width;
+	uint16_t c;
+};
+
+struct glyph *otf_vm(struct cff *cff, struct font *font, int gid);
 struct vm *otf_vm_new(struct cff *cff, struct font *font);
 void otf_vm_free(struct vm *vm);
 int otf_vm_operate(struct vm *vm, int level, struct cff_operax *op);
