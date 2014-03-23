@@ -6,4 +6,4 @@ otfprint: otfprint.o otf_mem.o otf_cff.o otf_vm.o otf_sid.o otf_kern.o otf_cmap.
 	gcc -o $@ $^
 
 clean::
-	rm -f *~ otfprint.o otf_mem.o otf_cff.o otf_vm.o otf_sid.o otf_kern.o otf_cmap.o otf
+	rm -f *~ otfprint.o otf_mem.o otf_cff.o otf_vm.o otf_sid.o otf_kern.o otf_cmap.o otfprint
