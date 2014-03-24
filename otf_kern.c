@@ -95,10 +95,23 @@ void kern_debug(struct kern *kern)
 		printf("\trangeShift    %d\n", fmt0->rangeShift);
 
 		for (j = 0; j < fmt0->nPairs; j++)
-			printf("\t[%3d] [%3d] %d %d\n", fmt0->pair[j].left, fmt0->pair[j].right, fmt0->pair[j].value, (1-fmt0->pair[j].value) *2);
+			printf("\t[%3d] [%3d] %d\n", fmt0->pair[j].left, fmt0->pair[j].right, fmt0->pair[j].value);
 	}
 }
 void kern_free(struct kern *kern)
 {
 	free(kern);
+}
+void kern_dump(struct kern *kern)
+{
+	int i;
+
+	for (i = 0; i < kern->nTables; i++) {
+		struct kern_table *table = &kern->table[i];
+		struct kern_format_0 *fmt0 = table->fmt0;
+		int j;
+
+		for (j = 0; j < fmt0->nPairs; j++)
+			printf("\t[%3d] [%3d] %d\n", fmt0->pair[j].left, fmt0->pair[j].right, fmt0->pair[j].value);
+	}
 }

@@ -36,5 +36,6 @@ struct kern *kern_parse(uint8_t *p);
 int          kern_get(struct kern *kern, uint16_t l, uint16_t r);
 void         kern_debug(struct kern *kern);
 void         kern_free(struct kern *kern);
+void         kern_dump(struct kern *kern);
 
 #endif /* OTF_KERN_H */
