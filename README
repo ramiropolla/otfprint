@@ -1,0 +1,30 @@
+otfprint parses an OTF file and prints out some given text as SVG paths.
+
+How do I use it?
+usage: otfprint <font> <text>
+example: otfprint BPreplayBold.otf "TarrafaHC"
+
+The result will print out to stdout, and includes two sections:
+<defs>: defines the paths for each letter used in the text
+<g>: a group containing your text, flipped up and anchored to the middle
+     I suggest you include it into another group, so you can translate and
+     scale the text as follows:
+     <g transform="translate(225,500) scale(0.086)">
+      <... output from otfprint ...>
+     </g>
+
+otfprint has no dependencies and does not depend on the system it is running
+on.
+The resulting SVG will always be exactly the same, and always be a direct
+representation of the data in the OTF file (paths, character widths and kern).
+No scaling or any other kind of transformation is done.
+
+Why did I write this?
+I tried using fontforge to export an OTF font to SVG and use that font inside
+an SVG.
+Then I found out SVG embedded fonts are hardly supported anywhere.
+Then I tried importing the OTF font from the SVG, which also isn't very well
+supported.
+Then I tried using the SVG font as a basis to write SVG paths manually, but
+the result was different from what inkscape and google chrome rendered.
+Then I said "fuck this shit, I'll parse the OTF myself".
