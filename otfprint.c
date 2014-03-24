@@ -5,6 +5,7 @@
 
 #include "otf_kern.h"
 #include "otf_cmap.h"
+#include "otf_gpos.h"
 #include "otf_cff.h"
 #include "otf_vm.h"
 #include "otf_sid.h"
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
 {
 	struct kern *kern = NULL;
 	struct cmap *cmap = NULL;
+	struct gpos *gpos = NULL;
 	struct sid *strings = NULL;
 	struct cff *cff = NULL;
 	struct otf_header *h = NULL;
@@ -139,6 +141,9 @@ int main(int argc, char *argv[])
 			cff = cff_parse(data+t[i].offset);
 			strings = sid_new(cff->string_idx);
 //			cff_debug(cff, strings);
+		} else if (t[i].tag == 0x47504f53) {
+			gpos = gpos_parse(data+t[i].offset);
+//			gpos_debug(gpos);
 		}
 	}
 
@@ -187,6 +192,8 @@ int main(int argc, char *argv[])
 	printf("</g>\n");
 
 the_end:
+	if (gpos)
+		gpos_free(gpos);
 	if (kern)
 		kern_free(kern);
 	if (strings)
