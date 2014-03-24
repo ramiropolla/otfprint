@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "otf_hmtx.h"
+#include "otf_hhea.h"
 #include "otf_kern.h"
 #include "otf_cmap.h"
 #include "otf_gpos.h"
@@ -45,6 +47,8 @@ int main(int argc, char *argv[])
 	struct kern *kern = NULL;
 	struct cmap *cmap = NULL;
 	struct gpos *gpos = NULL;
+	struct hhea *hhea = NULL;
+	struct hmtx *hmtx = NULL;
 	struct sid *strings = NULL;
 	struct cff *cff = NULL;
 	struct otf_header *h = NULL;
@@ -144,6 +148,12 @@ int main(int argc, char *argv[])
 		} else if (t[i].tag == 0x47504f53) {
 			gpos = gpos_parse(data+t[i].offset);
 //			gpos_debug(gpos);
+		} else if (t[i].tag == 0x68686561) {
+			hhea = hhea_parse(data+t[i].offset);
+//			hhea_debug(hhea);
+		} else if (t[i].tag == 0x686d7478) {
+			hmtx = hmtx_parse(data+t[i].offset, hhea);
+//			hmtx_debug(hmtx);
 		}
 	}
 
@@ -182,7 +192,7 @@ int main(int argc, char *argv[])
 		int gid = cmap_get_gid(cmap, 3, 1, *pp) + 1;
 		if (last_glyph)
 			xtra = kern_get(kern, last_glyph, gid);
-//		printf("kern %d\n", xtra);
+//		printf("kern %d lsb %d\n", xtra, hmtx_get_lsb(hmtx, gid));
 		x_offset += xtra;
 		if (*pp != ' ')
 			printf(" <use x=\"%d\" xlink:href=\"#_%c\" />\n", x_offset, *pp);
@@ -192,6 +202,10 @@ int main(int argc, char *argv[])
 	printf("</g>\n");
 
 the_end:
+	if (hmtx)
+		hmtx_free(hmtx);
+	if (hhea)
+		hhea_free(hhea);
 	if (gpos)
 		gpos_free(gpos);
 	if (kern)
