@@ -6,12 +6,11 @@ example: otfprint BPreplayBold.otf "TarrafaHC"
 
 The result will print out to stdout, and includes two sections:
 <defs>: defines the paths for each letter used in the text
-<g>: a group containing your text, flipped up and anchored to the middle
-     I suggest you include it into another group, so you can translate and
-     scale the text as follows:
-     <g transform="translate(225,500) scale(0.086)">
-      <... output from otfprint ...>
-     </g>
+<g>: two groups containing your text. The inner group is flipped up and
+     anchored to the middle. The outer group is moved down by the height
+     of the font, and moved midway again, so the text appears directly
+     in the output SVG file.
+     You should translate and scale the outer group the way you see fit.
 
 otfprint has no dependencies and does not depend on the system it is running
 on.

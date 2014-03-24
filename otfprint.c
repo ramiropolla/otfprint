@@ -157,6 +157,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* print svg header */
+	printf("<?xml version=\"1.0\" standalone=\"no\"?>\n");
+	printf("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n");
+	printf("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\">\n");
+
 	/* populate glyph_list with glyphs */
 	for (pp = argv[2]; *pp; pp++) {
 		if (!glyph_list[(int)*pp]) {
@@ -183,6 +188,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* print group */
+	printf("<g transform=\"translate(%g, %d)\">\n", x_offset/2., hhea->Ascender);
 	printf("<g transform=\"translate(-%g) scale(1,-1)\">\n", x_offset/2.);
 	x_offset = 0;
 	last_glyph = 0;
@@ -200,6 +206,10 @@ int main(int argc, char *argv[])
 		last_glyph = gid;
 	}
 	printf("</g>\n");
+	printf("</g>\n");
+
+	/* print svg trailer */
+	printf("</svg>\n");
 
 the_end:
 	if (hmtx)
