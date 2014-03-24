@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 	printf("<defs>\n");
 	for (i = 0; i < 0x100; i++)
 		if (glyph_list[i] && i != ' ')
-			printf(" <path id=\"_%c\" d=\"%s\" />\n", i, glyph_list[i]->path);
+			printf(" <path id=\"%c\" d=\"%s\" />\n", i, glyph_list[i]->path);
 	printf("</defs>\n");
 
 	/* get full text width */
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
 //		printf("kern %d lsb %d\n", xtra, hmtx_get_lsb(hmtx, gid));
 		x_offset += xtra;
 		if (*pp != ' ')
-			printf(" <use x=\"%d\" xlink:href=\"#_%c\" />\n", x_offset, *pp);
+			printf(" <use x=\"%d\" xlink:href=\"#%c\" />\n", x_offset, *pp);
 		x_offset += glyph->width;
 		last_glyph = gid;
 	}
